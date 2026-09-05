@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: devguard
+Version: 0.1.0
+Summary: Local-first autonomous Python code review agent.
+Requires-Dist: google-genai
+Requires-Dist: python-dotenv
+Requires-Dist: rich

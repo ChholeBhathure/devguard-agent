@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "devguard"
+version = "0.1.0"
+description = "Local-first autonomous Python code review agent."
+dependencies = [
+    "google-genai",
+    "python-dotenv",
+    "rich"
+]
+
+[project.scripts]
+devguard = "devguard.cli:main"

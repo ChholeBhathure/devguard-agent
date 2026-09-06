@@ -1,39 +1,39 @@
-Here is a code review summary based on the provided AST metadata for the **DevGuard** project.
+Here is a code review summary based on the provided AST project metadata for the **DevGuard** repository.
 
 ---
 
-### 1. Documentation & Code Quality
-* **Missing Methods Docstrings (`src/devguard/parser.py`)**:
-  * The `CodeStructureVisitor` class and all its visitor methods (`visit_Import`, `visit_ImportFrom`, `visit_FunctionDef`, `visit_ClassDef`) as well as the `parse_python_file` helper function have no docstrings (`'docstring': None`).
-  * Adding docstrings explaining expected node structures and return types will improve maintainability.
-* **Missing Docstrings in Initialization Methods**:
-  * `__init__` methods across `agent.py`, `parser.py`, and `retriever.py` lack docstrings detailing parameter types and default values (e.g., expected `model_name` string format or `root_dir` types).
-* **Test Documentation (`tests/test_cli.py`)**:
-  * Tests in `test_cli.py` (`test_save_markdown_report`, `test_save_html_report`) lack docstrings summarizing test conditions and assertions.
+### 1. Security & Input Validation
+* **HTML Generation in `save_report` (`src/devguard/cli.py`)**: 
+  * If `save_report` performs simple string manipulation or regex conversion to convert Markdown to HTML, it may be susceptible to **HTML/Script Injection** if the analyzed codebase or LLM response contains untrusted raw HTML/JS tags.
+  * *Recommendation*: Use a sanitized rendering library (e.g., `markdown` with `bleach`, or `mistune`) rather than custom string formatting when outputting HTML files.
+* **Environment Variable and API Key Validation (`src/devguard/agent.py`)**:
+  * `agent.py` imports `dotenv.load_dotenv` and `google.genai`. If the API key environment variable is missing, `DevGuardAgent.__init__` or `review_codebase` may throw unhandled errors during execution.
+  * *Recommendation*: Ensure explicit error handling/checking for key presence before calling external API endpoints.
 
 ---
 
-### 2. Error Handling & Robustness
-* **AST Parsing Resilience (`src/devguard/parser.py`)**:
-  * `parse_python_file` uses `ast.parse`. When scanning arbitrary codebases, unparseable files or syntax errors will raise `SyntaxError` or `UnicodeDecodeError`. 
-  * **Recommendation**: Wrap file reads and AST parsing in explicit `try-except` blocks to skip or report unparseable files without halting the entire scanning process.
-* **Directory Traversal Resilience (`src/devguard/retriever.py`)**:
-  * `LocalRetriever.scan_directory` should explicitly handle filesystem edge cases such as permission errors (`PermissionError`), broken symbolic links, and non-existent root paths.
+### 2. Potential Logic & AST Parsing Issues
+* **AST Visitor Traversal (`src/devguard/parser.py`)**:
+  * In `CodeStructureVisitor`, overridden methods like `visit_FunctionDef` or `visit_ClassDef` must explicitly call `self.generic_visit(node)` if child nodes (such as nested functions, methods inside classes, or inner decorators) need to be parsed.
+  * Without calling `generic_visit`, nested definitions might be silently ignored.
+* **File Encoding & Syntax Error Handling (`src/devguard/parser.py` / `retriever.py`)**:
+  * `parse_python_file` should handle `SyntaxError`, `UnicodeDecodeError`, and `PermissionError` explicitly. If an unparsable or non-UTF-8 Python file is encountered, scanning the entire directory could abort unexpectedly without proper `try-except` blocks.
 
 ---
 
-### 3. Security & Defensive Engineering
-* **API Key & Secrets Handling (`src/devguard/agent.py`)**:
-  * Ensure API credentials used for the Gemini client (`google.genai`) are pulled strictly from environment variables or secure storage, avoiding hardcoded fallbacks or logging raw API responses containing sensitive prompt metadata.
-* **Output Path Sanitization (`src/devguard/cli.py`)**:
-  * The `save_report` function accepts an `output_path`. When writing reports to disk based on user input, ensure paths are sanitized to prevent accidental path traversal or overwriting critical system files.
-* **Prompt Construction Controls (`src/devguard/agent.py`)**:
-  * In `review_codebase`, when formatting AST metadata into a prompt payload, ensure large codebases are truncated or chunked cleanly to avoid exceeding model context window limits or triggering API payload size limits.
+### 3. Missing Docstrings & Code Documentation
+* **`src/devguard/parser.py`**:
+  * `CodeStructureVisitor` class and its methods (`__init__`, `visit_Import`, `visit_ImportFrom`, `visit_FunctionDef`, `visit_ClassDef`) lack docstrings.
+  * `parse_python_file` helper function lacks a docstring explaining expected inputs (`file_path`) and return structures.
+* **`src/devguard/agent.py`**:
+  * `__init__` method lacks documentation detailing default values or expected model parameters.
+* **`tests/test_cli.py`**:
+  * Test functions (`test_save_markdown_report`, `test_save_html_report`) do not contain docstrings explaining test coverage and assertions.
 
 ---
 
-### 4. Testing & Test Coverage
-* **CLI Entry Point Testing**:
-  * `tests/test_cli.py` currently tests `save_report`, but does not test `main()` (argument parsing, flags, default option selection). Consider adding CLI execution tests using `pytest` fixtures or `unittest.mock`.
-* **Edge Case Coverage in Parser & Retriever**:
-  * Add unit tests for edge cases in `test_parser.py` (e.g., empty files, malformed syntax, async functions, decorators) and `test_retriever.py` (e.g., nested `.gitignore` structures, custom excluded folders).
+### 4. Performance & Design Enhancements
+* **Directory Traversal Filtering (`src/devguard/retriever.py`)**:
+  * `LocalRetriever.scan_directory` should ensure large non-source directories (e.g., `.git`, `.venv`, `__pycache__`, `.mypy_cache`, node modules) are excluded at the directory walk level (`os.walk` or `Path.walk`) rather than filtering after reading paths, to prevent unnecessary IO overhead on large codebases.
+* **Inconsistent Import Styles**:
+  * In `test_parser.py` and `test_retriever.py`, absolute imports reference `src.devguard...` while `test_cli.py` references `devguard...`. Standardize package imports across the test suite to avoid `ModuleNotFoundError` during different test runner invocations (e.g., `pytest` vs `python -m unittest`).

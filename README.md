@@ -31,3 +31,9 @@ devguard-agent/
 ├── Dockerfile              # Production container specification
 ├── pyproject.toml          # Package metadata & CLI entry points
 └── README.md
+
+---
+
+## License
+
+MIT License. Designed for developer productivity and local-first code security.

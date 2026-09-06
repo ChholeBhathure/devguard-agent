@@ -14,3 +14,8 @@ dependencies = [
 
 [project.scripts]
 devguard = "devguard.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]

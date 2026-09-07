@@ -17,9 +17,10 @@ st.title("🛡️ DevGuard — AI Security Auditor")
 st.write("Upload or paste Python code below to run a live security and vulnerability scan.")
 
 # Retrieve API key from environment variable or user input
-gemini_key = os.getenv("GEMINI_API_KEY")
+gemini_key = st.text_input("Enter Gemini API Key:", type="password")
 if not gemini_key:
-    gemini_key = st.text_input("Enter Gemini API Key:", type="password")
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    
 
 code_input = st.text_area("Python Source Code:", height=250, value="""def login(user, pwd):\n    query = f"SELECT * FROM users WHERE user='{user}' AND pass='{pwd}'"\n    return query""")
 

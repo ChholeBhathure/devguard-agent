@@ -12,19 +12,19 @@ def save_report(content: str, output_path: str) -> None:
         html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>DevGuard Security Audit Report</title>
-    <style>
+<meta charset="UTF-8">
+<title>DevGuard Security Audit Report</title>
+<style>
         body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; max-width: 900px; margin: 40px auto; padding: 0 20px; background: #0d1117; color: #c9d1d9; }}
         h1, h2, h3 {{ color: #58a6ff; }}
         pre {{ background: #161b22; padding: 16px; border-radius: 6px; overflow-x: auto; }}
         code {{ font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace; }}
-    </style>
+</style>
 </head>
 <body>
-    <h1>DevGuard Security Audit Report</h1>
-    <hr>
-    <div><pre>{content}</pre></div>
+<h1>DevGuard Security Audit Report</h1>
+<hr>
+<div><pre>{content}</pre></div>
 </body>
 </html>"""
         path.write_text(html_content, encoding="utf-8")
@@ -42,7 +42,7 @@ def main():
     
     config = load_config(args.dir)
 
-    retriever = LocalRetriever(root_dir=args.dir, ignore_dirs=config.get("ignore_dirs"))
+    retriever = LocalRetriever(args.dir, config)
     indexed_files = retriever.scan_directory()
     
     agent = DevGuardAgent()

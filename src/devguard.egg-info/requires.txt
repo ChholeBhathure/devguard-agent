@@ -1,3 +1,6 @@
 google-genai
 python-dotenv
 rich
+
+[dev]
+pytest>=8.0.0

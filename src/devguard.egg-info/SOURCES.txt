@@ -1,8 +1,12 @@
+LICENSE
+README.md
 pyproject.toml
 src/__init__.py
 src/devguard/__init__.py
 src/devguard/agent.py
+src/devguard/chunker.py
 src/devguard/cli.py
+src/devguard/config.py
 src/devguard/parser.py
 src/devguard/retriever.py
 src/devguard.egg-info/PKG-INFO
@@ -11,3 +15,9 @@ src/devguard.egg-info/dependency_links.txt
 src/devguard.egg-info/entry_points.txt
 src/devguard.egg-info/requires.txt
 src/devguard.egg-info/top_level.txt
+tests/test_agent.py
+tests/test_chunker.py
+tests/test_cli.py
+tests/test_config.py
+tests/test_parser.py
+tests/test_retriever.py

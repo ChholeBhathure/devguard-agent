@@ -2,6 +2,10 @@ Metadata-Version: 2.4
 Name: devguard
 Version: 0.1.0
 Summary: Local-first autonomous Python code review agent.
+License-File: LICENSE
 Requires-Dist: google-genai
 Requires-Dist: python-dotenv
 Requires-Dist: rich
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Dynamic: license-file

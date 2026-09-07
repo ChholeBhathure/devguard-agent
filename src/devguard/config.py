@@ -8,8 +8,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "max_file_size_kb": 500,
 }
 
-def load_config(target_dir: Union[str, Path] = ".") -> Dict[str, Any]:
-    target_path = Path(target_dir).resolve()
+def load_config(target_dir):
+    target_dir = Path(target_dir)
     """
     
     Searches for a .devguardrc.json in the target dictionary or user root.

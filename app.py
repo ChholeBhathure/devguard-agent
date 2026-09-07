@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+
+# Add the repository root directory to Python's module search path
+sys.path.append(str(Path(__file__).parent.resolve()))
+
 import streamlit as st
 import os
 from devguard.agent import analyze_code  # Uses your existing Gemini agent logic

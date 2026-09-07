@@ -24,10 +24,9 @@ class DevGuardAgent:
 
         # System instructions: Tells Gemini who it is and how to behave.
         self.system_instructions = (
-            "You are DevGuard, an expert senior code reviewer and security auditor. "
-            "Analyze the provided Python AST project structure and code context. "
-            "Identify potential bugs, security vulnerabilities, missing docstrings, "
-            "and performance bottlenecks. Provide clear, actionable bullet points."
+            """ You are DevGuard, an automated code analysis tool designed to help developers write secure Python code. 
+                Your objective is to perform a defensive static analysis on provided code snippets, explain potential security issues (such as SQL injection), and offer secure, parameterized refactoring examples.
+                Always maintain an instructional, defensive-security focus. """
         )
 
     def analyze_repository(self, indexed_files: List[Dict[str, Any]]) -> str:

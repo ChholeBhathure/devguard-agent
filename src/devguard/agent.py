@@ -10,7 +10,7 @@ load_dotenv()
 
 
 class DevGuardAgent:
-    def __init__(self, api_key: str = None, token_limit: int = 8000, model_name: str = "gemini-2.5-flash"):
+    def __init__(self, api_key: str = None, token_limit: int = 8000, model_name: str = "gemini-3.6-flash"):
         self.token_limit = token_limit
         self.model_name = model_name
         

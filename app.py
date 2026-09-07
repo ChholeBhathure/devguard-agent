@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+import time
 
 # Add the repository root directory to Python's module search path
 src_path = Path(__file__).parent / "src"
@@ -29,15 +30,31 @@ if st.button("Run Security Audit"):
         st.warning("Please enter code to analyze.")
     else:
         with st.spinner("Analyzing codebase AST and running Gemini security audit..."):
-            try:
-                # Parse AST tree from input codde snippet
-                parsed_ast = ast.dump(ast.parse(code_input))
-                indexed_file = [{"path": "snippet.py" ,"ast": parsed_ast, "code": code_input}]
+            # Set maximum retry attempt fot transient 503 API spikes
+            max_retries = 3
+            report = None
 
-                # Initialize DevGuardAgent instance and execute review
-                agent = DevGuardAgent(api_key=gemini_key)
-                report = agent.analyze_repository(indexed_file)
-                st.markdown("### 📋 Audit Results")
+            for attempt in range(max_retries):
+                
+                try:
+                    # Parse AST tree from input codde snippet
+                    parsed_ast = ast.dump(ast.parse(code_input))
+                    indexed_file = [{"path": "snippet.py", "ast": parsed_ast, "code": code_input}]
+
+                    # Initialize DevGuardAgent instance and execute review
+                    agent = DevGuardAgent(api_key=gemini_key)
+                    report = agent.analyze_repository(indexed_file)
+                    break #Exit loop if successful
+                except SyntaxError as syn_err:
+                    st.error(f"Invalid Python Code Syntax: {syn_err}")
+                    break
+                except Exception as e:
+                    # If hit with a transient 503 capacity spike, wait and retry
+                    if "503" in str(e) and attempt < max_retries - 1:
+                        time.sleep(2)
+                        continue
+                    else:
+                        st.error(f"Audit failed: {e}")
+                        break
+            if report:
                 st.markdown(report)
-            except Exception as e:
-                st.error(f"Audit failed: {str(e)}")

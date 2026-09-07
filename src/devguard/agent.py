@@ -38,7 +38,7 @@ class DevGuardAgent:
 
         Please perform a complete code review, bug scan, security audit, and refactoring for the code snippet above.
         """
-        response = self.clients.models.generate_content(
+        response = self.client.models.generate_content(
             model=self.model_name,
             contents=prompt,
             config=types.GenerativeContentConfig(

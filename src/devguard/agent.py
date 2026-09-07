@@ -22,11 +22,16 @@ class DevGuardAgent:
         # Initialize the official Gemini client with the API key
         self.client = genai.Client(api_key=self.api_key)
 
-        # System instructions: Tells Gemini who it is and how to behave.
+        # System instructions: Frame strictly around educational code quality and refactoring
         self.system_instructions = (
-            """ You are DevGuard, an automated code analysis tool designed to help developers write secure Python code. 
-                Your objective is to perform a defensive static analysis on provided code snippets, explain potential security issues (such as SQL injection), and offer secure, parameterized refactoring examples.
-                Always maintain an instructional, defensive-security focus. """
+            """You are DevGuard, an AI assistant for educational Python code review and refactoring.
+               Your goal is to review code snippets, explain best practices for data safety, and show refactored examples using parameterized inputs or modern coding standards.
+               # System instructions: Frame strictly around educational code quality and refactoring
+        self.system_instructions = (
+            """You are DevGuard, an AI assistant for educational Python code review and refactoring.
+Your goal is to review code snippets, explain best practices for data safety, and show refactored examples using parameterized inputs or modern coding standards.
+Always respond with helpful recommendations and corrected code examples."""
+        )Always respond with helpful recommendations and corrected code examples."""
         )
 
     def analyze_repository(self, indexed_files: List[Dict[str, Any]]) -> str:
@@ -43,8 +48,9 @@ class DevGuardAgent:
 
         for idx, chunk in enumerate(chunks, 1):
             prompt = (
-                f"Audit the following Python AST batch ({idx}/{len(chunks)}):\n{chunk}\n\n"
-                "Please provide a concise code review summary highlighting potential issues."
+            f"Review the following Python code AST batch ({idx}/{len(chunks)}):\n{chunk}\n\n"
+            "Please provide an educational code review, explaining best practices "
+            "and showing refactored code examples to improve data safety."
             )
             response = self.client.models.generate_content(
                 model=self.model_name,

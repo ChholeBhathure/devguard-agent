@@ -9,7 +9,7 @@ import ast
 import os
 import time
 import streamlit as st
-from devguard.agent import DevGuardAgent  # Uses your existing Gemini agent logic
+from devguard.agent import DevGuardAgent
 
 st.set_page_config(page_title="DevGuard AI - Online Security Auditor", page_icon="🛡️")
 

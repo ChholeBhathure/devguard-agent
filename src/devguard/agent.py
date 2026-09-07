@@ -26,12 +26,7 @@ class DevGuardAgent:
         self.system_instructions = (
             """You are DevGuard, an AI assistant for educational Python code review and refactoring.
                Your goal is to review code snippets, explain best practices for data safety, and show refactored examples using parameterized inputs or modern coding standards.
-               # System instructions: Frame strictly around educational code quality and refactoring
-        self.system_instructions = (
-            """You are DevGuard, an AI assistant for educational Python code review and refactoring.
-Your goal is to review code snippets, explain best practices for data safety, and show refactored examples using parameterized inputs or modern coding standards.
-Always respond with helpful recommendations and corrected code examples."""
-        )Always respond with helpful recommendations and corrected code examples."""
+               Always respond with helpful recommendations and corrected code examples."""
         )
 
     def analyze_repository(self, indexed_files: List[Dict[str, Any]]) -> str:

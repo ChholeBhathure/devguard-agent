@@ -6,6 +6,7 @@ License-File: LICENSE
 Requires-Dist: google-genai
 Requires-Dist: python-dotenv
 Requires-Dist: rich
+Requires-Dist: markdown
 Provides-Extra: dev
 Requires-Dist: pytest>=8.0.0; extra == "dev"
 Dynamic: license-file

@@ -1,6 +1,7 @@
 google-genai
 python-dotenv
 rich
+markdown
 
 [dev]
 pytest>=8.0.0

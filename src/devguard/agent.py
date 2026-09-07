@@ -41,7 +41,7 @@ class DevGuardAgent:
         response = self.client.models.generate_content(
             model=self.model_name,
             contents=prompt,
-            config=types.GenerativeContentConfig(
+            config=types.GenerateContentConfig(
                 system_instruction=self.system_instruction,
                 temperature=0.2,
             )

@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 
 # Add the repository root directory to Python's module search path
+src_path = Path(__file__).parent / "src"
 sys.path.append(str(Path(__file__).parent.resolve()))
 
 import streamlit as st

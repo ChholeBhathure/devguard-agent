@@ -1,3 +1,4 @@
+-e .
 streamlit
 google-genai
 rich

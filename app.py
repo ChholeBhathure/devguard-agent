@@ -3,11 +3,12 @@ from pathlib import Path
 
 # Add the repository root directory to Python's module search path
 src_path = Path(__file__).parent / "src"
-sys.path.append(str(Path(__file__).parent.resolve()))
+sys.path.append(str(src_path.resolve()))
 
 import streamlit as st
 import os
-from devguard.agent import analyze_code  # Uses your existing Gemini agent logic
+import ast
+from devguard.agent import DevGuardAgent  # Uses your existing Gemini agent logic
 
 st.set_page_config(page_title="DevGuard AI - Online Security Auditor", page_icon="🛡️")
 
@@ -29,8 +30,13 @@ if st.button("Run Security Audit"):
     else:
         with st.spinner("Analyzing codebase AST and running Gemini security audit..."):
             try:
-                # Call agent analysis logic directly
-                report = analyze_code(code_input, api_key=gemini_key)
+                # Parse AST tree from input codde snippet
+                parsed_ast = ast.dump(ast.parse(code_input))
+                indexed_file = [{"path": "snippet.py" ,"ast": parsed_ast, "code": code_input}]
+
+                # Initialize DevGuardAgent instance and execute review
+                agent = DevGuardAgent(api_key=gemini_key)
+                report = agent.analyze_repository(indexed_file)
                 st.markdown("### 📋 Audit Results")
                 st.markdown(report)
             except Exception as e:

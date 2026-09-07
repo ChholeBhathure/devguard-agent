@@ -1,14 +1,14 @@
 import sys
 from pathlib import Path
-import time
 
 # Add the repository root directory to Python's module search path
 src_path = Path(__file__).parent / "src"
 sys.path.append(str(src_path.resolve()))
 
-import streamlit as st
-import os
 import ast
+import os
+import time
+import streamlit as st
 from devguard.agent import DevGuardAgent  # Uses your existing Gemini agent logic
 
 st.set_page_config(page_title="DevGuard AI - Online Security Auditor", page_icon="🛡️")

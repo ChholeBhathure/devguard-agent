@@ -5,24 +5,45 @@ from pathlib import Path
 src_path = Path(__file__).parent / "src"
 sys.path.append(str(src_path.resolve()))
 
-import ast
 import os
 import time
 import streamlit as st
 from devguard.agent import DevGuardAgent
 
-st.set_page_config(page_title="DevGuard AI - Online Security Auditor", page_icon="🛡️")
+st.set_page_config(page_title="DevGuard AI - Universal Security Auditor", page_icon="🛡️")
 
-st.title("🛡️ DevGuard — AI Security Auditor")
-st.write("Upload or paste Python code below to run a live security and vulnerability scan.")
+st.title("🛡️ DevGuard — Universal AI Code Auditor & Debugger")
+st.write("Upload or paste code in any programming or scripting language to run a live security and bug scan.")
 
-# Retrieve API key from environment variable or user input
+# Retrieve API key from user input or environment variable
 gemini_key = st.text_input("Enter Gemini API Key:", type="password")
 if not gemini_key:
     gemini_key = os.getenv("GEMINI_API_KEY")
-    
 
-code_input = st.text_area("Python Source Code:", height=250, value="""def login(user, pwd):\n    query = f"SELECT * FROM users WHERE user='{user}' AND pass='{pwd}'"\n    return query""")
+# Universal Language Selector
+language = st.selectbox(
+    "Select Programming / Scripting Language:",
+    [
+        "Auto-detect",
+        "Python",
+        "JavaScript / Node.js",
+        "React / JSX / TSX",
+        "HTML / CSS",
+        "SQL",
+        "C / C++",
+        "Java",
+        "Go",
+        "Rust",
+        "Bash / Shell",
+        "PHP"
+    ]
+)
+
+code_input = st.text_area(
+    "Source Code:",
+    height=250,
+    value="""def login(user, pwd):\n    query = f"SELECT * FROM users WHERE user='{user}' AND pass='{pwd}'"\n    return query"""
+)
 
 if st.button("Run Security Audit"):
     if not gemini_key:
@@ -30,35 +51,24 @@ if st.button("Run Security Audit"):
     elif not code_input.strip():
         st.warning("Please enter code to analyze.")
     else:
-        with st.spinner("Analyzing codebase AST and running Gemini security audit..."):
-            # Set maximum retry attempt fot transient 503 API spikes
+        with st.spinner("Analyzing code and running Gemini security audit..."):
             max_retries = 3
             report = None
 
             for attempt in range(max_retries):
-                
                 try:
-                    # Parse AST tree from input codde snippet
-                    parsed_ast = ast.dump(ast.parse(code_input))
-                    indexed_file = [{"path": "snippet.py", "ast": parsed_ast, "code": code_input}]
-
-                    # Initialize DevGuardAgent instance and execute review
                     agent = DevGuardAgent(api_key=gemini_key)
-                    report = agent.analyze_repository(indexed_file)
-                    break #Exit loop if successful
-                except SyntaxError as syn_err:
-                    st.error(f"Invalid Python Code Syntax: {syn_err}")
+                    report = agent.analyze_code(code_input, language=language)
                     break
                 except Exception as e:
                     error_msg = str(e)
-                    # Check for 503 error codes or capacity message strings
                     is_503 = "503" in error_msg or "UNAVAILABLE" in error_msg or "high demand" in error_msg
-                    # If hit with a transient 503 capacity spike, wait and retry
                     if is_503 and attempt < max_retries - 1:
                         time.sleep(3)
                         continue
                     else:
                         st.error(f"Audit failed: {e}")
                         break
+
             if report:
                 st.markdown(report)

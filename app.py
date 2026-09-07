@@ -42,7 +42,9 @@ language = st.selectbox(
 code_input = st.text_area(
     "Source Code:",
     height=250,
-    value="""def login(user, pwd):\n    query = f"SELECT * FROM users WHERE user='{user}' AND pass='{pwd}'"\n    return query"""
+    value="""expApp.listen(4001, () => {
+    console.log("Server running on port 4001")
+    })"""
 )
 
 if st.button("Run Security Audit"):

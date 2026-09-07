@@ -49,9 +49,12 @@ if st.button("Run Security Audit"):
                     st.error(f"Invalid Python Code Syntax: {syn_err}")
                     break
                 except Exception as e:
+                    error_msg = str(e)
+                    # Check for 503 error codes or capacity message strings
+                    is_503 = "503" in error_msg or "UNAVAILABLE" in error_msg or "high demand" in error_msg
                     # If hit with a transient 503 capacity spike, wait and retry
-                    if "503" in str(e) and attempt < max_retries - 1:
-                        time.sleep(2)
+                    if is_503 and attempt < max_retries - 1:
+                        time.sleep(3)
                         continue
                     else:
                         st.error(f"Audit failed: {e}")

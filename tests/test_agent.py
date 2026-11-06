@@ -7,7 +7,7 @@ from devguard.agent import DevGuardAgent
 def test_agent_initialization(mock_genai_client, monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "fake_test_key")
     agent = DevGuardAgent()
-    assert agent.model_name == "gemini-2.5-flash"
+    assert agent.model_name == "gemini-3.6-flash"
     assert agent.api_key == "fake_test_key"
 
 
@@ -26,7 +26,7 @@ def test_analyze_repository_mocked(mock_genai_client, monkeypatch):
     agent = DevGuardAgent()
     sample_files = [{"filename": "main.py", "ast": "Module(...)"}]
     
-    result = agent.analyze_repository(sample_files)
+    result = agent.analyze_code(sample_files)
 
     assert "No critical vulnerabilities found." in result
     assert mock_instance.models.generate_content.called

@@ -46,7 +46,7 @@ def main():
     indexed_files = retriever.scan_directory()
     
     agent = DevGuardAgent()
-    report = agent.analyze_repository(indexed_files)
+    report = agent.analyze_code(indexed_files)
     
     print("\n--- DevGuard Audit Results ---\n")
     print(report)

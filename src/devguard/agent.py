@@ -1,6 +1,7 @@
 import os
 from google import genai
 from google.genai import types
+from devguard.schemas.finding import SecurityReport
 
 from typing import List, Dict, Any
 from dotenv import load_dotenv
@@ -27,7 +28,7 @@ class DevGuardAgent:
         3. Deliver fully refactored, production-ready code with secure best practices applied.
         """
 
-    def analyze_code(self, code_snippet: str, language: str = "Auto-detect") -> str:
+    def analyze_code(self, code_snippet: str, language: str = "Auto-detect") -> SecurityReport:
         prompt = f"""
         Programming/Scripting Language: {language}
 
@@ -36,7 +37,18 @@ class DevGuardAgent:
         {code_snippet}
         ```
 
-        Please perform a complete code review, bug scan, security audit, and refactoring for the code snippet above.
+        Perform a security audit of the supplied code.
+
+        Instructions:
+        1.Identify genuine security vulnerabilities.
+        2.Explain each vulnerability clearly.
+        3.Include relevant code evidence.
+        4.Suggest a secure remediation.
+        5.Assign severity: critical, high, medium, low, or info.
+        6.Give a confidence score between 0.0 and 1.0 for each finding.
+        7.Do not invent vulnerabilities,evidence, or line numbers.
+        8.If no vulnerabilities are found, return an empty findings list.
+        9.Return a structured security report.
         """
         response = self.client.models.generate_content(
             model=self.model_name,
@@ -44,7 +56,12 @@ class DevGuardAgent:
             config=types.GenerateContentConfig(
                 system_instruction=self.system_instruction,
                 temperature=0.2,
+                response_mime_type="application/json",
+                response_schema=SecurityReport,
             )
         )
-        return response.text
+
+        if response.parsed is None:
+            raise ValueError("Gemini did not return a valid structured report.")
+        return SecurityReport.model_validate(response.parsed)
     

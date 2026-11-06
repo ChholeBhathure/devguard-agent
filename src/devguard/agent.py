@@ -29,6 +29,11 @@ class DevGuardAgent:
         """
 
     def analyze_code(self, code_snippet: str, language: str = "Auto-detect") -> SecurityReport:
+        if not isinstance(code_snippet, str):
+            raise TypeError("code_snippet must be a string.")
+
+        if not code_snippet.strip():
+            raise ValueError("code_snippet cannot be empty.")
         prompt = f"""
         Programming/Scripting Language: {language}
 

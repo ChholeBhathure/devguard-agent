@@ -55,3 +55,19 @@ def test_analyze_code_raises_error_for_missing_response(mock_genai_client, monke
 
     with pytest.raises(ValueError, match="valid structured report"):
         agent.analyze_code("print('Hello, World!')")
+
+def test_analyze_code_rejects_empty_input(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "fake_test_key")
+
+    with patch("devguard.agent.genai.Client"):
+        agent = DevGuardAgent()
+        with pytest.raises(ValueError, match="cannot be empty"):
+            agent.analyze_code("   ")  # Input with only whitespace
+
+def test_analyze_code_rejects_non_string_input(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "fake_test_key")
+
+    with patch("devguard.agent.genai.Client"):
+        agent = DevGuardAgent()
+        with pytest.raises(TypeError, match="must be a string"):
+            agent.analyze_code(None)  # Non-string input

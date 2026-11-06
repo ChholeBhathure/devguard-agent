@@ -48,9 +48,13 @@ class LocalRetriever:
                     #Extracts structural metadata from the Python file using AST.
                     parsed_data=parse_python_file(path)
                     if parsed_data:
+                        source_code = path.read_text(encoding="utf-8")
+
                         parsed_data["file_path"] = str(
                             path.relative_to(self.root_dir)
                         )
+                        parsed_data["source_code"] = source_code
+                        
                         indexed_files.append(parsed_data)
                     
                 except (SyntaxError,UnicodeError,OSError,ValueError) as error:

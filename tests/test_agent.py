@@ -8,7 +8,7 @@ from devguard.schemas.finding import SecurityReport
 def test_agent_initialization(mock_genai_client, monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "fake_test_key")
     agent = DevGuardAgent()
-    assert agent.model_name == "gemini-3.6-flash"
+    assert agent.model_name == "gemini-2.5-flash"
     assert agent.api_key == "fake_test_key"
     mock_genai_client.assert_called_once()
 

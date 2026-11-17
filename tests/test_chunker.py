@@ -1,20 +1,18 @@
-from devguard.chunker import chunk_ast_payloads, estimate_tokens
+import pytest
+from devguard.chunker import chunk_source_code
 
-def test_estimate_tokens():
-    text = "a" * 40
-    assert estimate_tokens(text) == 10
-
-def test_chunk_ast_payloads_single_chunk():
-    files = [{"filename": "test.py", "ast": "data"}]
-    chunks = chunk_ast_payloads(files, max_tokens=1000)
-    assert len(chunks) == 1
-    assert len(chunks[0]) == 1
-
-def test_chunk_ast_payloads_splits_properly():
-    # Large item that uses roughly ~100 tokens (400 chars)
-    large_item = {"filename": "large.py", "content": "x" * 400}
-    files = [large_item for _ in range(5)]
+def test_chunk_source_code_basic():
+    code = "line 1\nline 2\nline 3\nline 4\nline 5\n"
+    chunks = chunk_source_code(code, "auth.py", max_tokens=2, overlap_lines=1)
     
-    # Set max_tokens small enough to force chunking into multiple batches
-    chunks = chunk_ast_payloads(files, max_tokens=250)
-    assert len(chunks) > 1
+    assert len(chunks) > 0
+    assert chunks[0]["file_path"] == "auth.py"
+    assert chunks[0]["start_line"] == 1
+
+def test_chunk_source_code_empty():
+    chunks = chunk_source_code("", "empty.py")
+    assert chunks == []
+
+def test_chunk_source_code_invalid_tokens():
+    with pytest.raises(ValueError):
+        chunk_source_code("some code", "file.py", max_tokens=0)

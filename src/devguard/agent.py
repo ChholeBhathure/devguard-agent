@@ -37,3 +37,57 @@ class DevGuardAgent:
         if response.parsed is None:
             raise ValueError("Gemini did not return a valid structured report.")
         return SecurityReport.model_validate(response.parsed)
+
+    def analyze_repository(self, files: list[dict]) -> SecurityReport:
+        from devguard.chunker import chunk_source_code
+        
+        all_findings = []
+        project_name = "Scanned Project"
+        
+        # 1. Loop through every file the retriever found
+        for file_entry in files:
+            source_code = file_entry.get("source_code", "")
+            file_path = file_entry.get("file_path", "unknown.py")
+            
+            if not source_code:
+                continue
+                
+            # 2. Chunk the file's source code
+            chunks = chunk_source_code(source_code, file_path)
+            
+            # 3. Analyze each chunk with Gemini
+            for chunk in chunks:
+                chunk_code = chunk["source_code"]
+                start_line = chunk["start_line"]
+                end_line = chunk["end_line"]
+                
+                # Create a prompt specific to this chunk
+                prompt = f"File: {file_path}\nLines {start_line} to {end_line}\n\nCode:\n```python\n{chunk_code}\n```"
+                
+                # We reuse our existing Gemini call logic, but we need to handle the response
+                # (We will refine this in the next step to handle errors and rate limits)
+                try:
+                    # Note: We are currently calling analyze_code for every chunk. 
+                    # In a real app, we might want a dedicated method that doesn't repeat the project_name setup.
+                    chunk_report = self.analyze_code(chunk_code, language="python")
+                    
+                    # Fix the line numbers to match the original file
+                    for finding in chunk_report.findings:
+                        if finding.line_number:
+                            # Adjust relative line number to absolute file line
+                            finding.line_number = finding.line_number + start_line - 1
+                        all_findings.append(finding)
+                        
+                except Exception as e:
+                    print(f"Failed to analyze chunk in {file_path}: {e}")
+                    continue
+
+        # 4. Aggregate the findings into one final report
+        final_report = SecurityReport(
+            project_name=project_name,
+            findings=all_findings,
+            summary=f"Analyzed {len(files)} files and found {len(all_findings)} potential issues.",
+            recommendations=["Review the findings and apply the suggested remediations."]
+        )
+        
+        return final_report

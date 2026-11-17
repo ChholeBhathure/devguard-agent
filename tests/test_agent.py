@@ -71,3 +71,44 @@ def test_analyze_code_rejects_non_string_input(monkeypatch):
         agent = DevGuardAgent()
         with pytest.raises(TypeError, match="must be a string"):
             agent.analyze_code(None)  # Non-string input
+@patch("devguard.agent.genai.Client")
+def test_analyze_repository_mocked(mock_genai_client, monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "fake_test_key")
+    
+    # Mock the Gemini response object
+    mock_response = MagicMock()
+    mock_response.parsed = {
+        "project_name": "Test Project",
+        "findings": [{
+            "title": "SQL Injection",
+            "severity": "high",
+            "category": "Injection",
+            "file_path": "main.py",
+            "line_number": 5, # This is line 5 of the chunk
+            "description": "Bad SQL",
+            "evidence": "query = 'SELECT * FROM users'",
+            "recommendation": "Use parameterized queries",
+            "confidence": 0.9
+        }],
+        "summary": "Found issues.",
+        "recommendations": ["Fix SQL"]
+    }
+    
+    mock_instance = mock_genai_client.return_value
+    mock_instance.models.generate_content.return_value = mock_response
+    
+    agent = DevGuardAgent()
+    
+    # Fake files passed by the retriever
+    fake_files = [{
+        "file_path": "main.py",
+        "source_code": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10"
+    }]
+    
+    report = agent.analyze_repository(fake_files)
+    
+    assert report.project_name == "Scanned Project"
+    assert len(report.findings) == 1
+    assert report.findings[0].title == "SQL Injection"
+    # Since the chunk starts at line 1, line 5 stays line 5. 
+    # But if the chunk started at line 10, it would be 5 + 10 - 1 = 14.

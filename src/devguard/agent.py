@@ -7,7 +7,7 @@ from devguard.schemas.finding import SecurityReport
 load_dotenv()
 
 class DevGuardAgent:
-    def __init__(self, api_key: str = None, token_limit: int = 8000, model_name: str = "gemini-2.5-flash"):
+    def __init__(self, api_key: str = None, token_limit: int = 8000, model_name: str = "gemini-3.6-flash"):
         self.token_limit = token_limit
         self.model_name = model_name
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
@@ -67,12 +67,15 @@ class DevGuardAgent:
                 # We reuse our existing Gemini call logic, but we need to handle the response
                 # (We will refine this in the next step to handle errors and rate limits)
                 try:
+                    #Create a specialized prompt for the chunk
+                    chunk_prompt=f"Audit this code from file'{file_path}'(lines{start_line}-{end_line}):\n\n{chunk_code}"
                     # Note: We are currently calling analyze_code for every chunk. 
                     # In a real app, we might want a dedicated method that doesn't repeat the project_name setup.
                     chunk_report = self.analyze_code(chunk_code, language="python")
                     
                     # Fix the line numbers to match the original file
                     for finding in chunk_report.findings:
+                        finding.file_path=file_path
                         if finding.line_number:
                             # Adjust relative line number to absolute file line
                             finding.line_number = finding.line_number + start_line - 1

@@ -1,21 +1,37 @@
+import json
 from unittest.mock import MagicMock, patch
+
 import pytest
+
 from devguard.agent import DevGuardAgent
 from devguard.schemas.finding import SecurityReport
 
 
-@patch("devguard.agent.genai.Client")
-def test_agent_initialization(mock_genai_client, monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "fake_test_key")
+def make_mock_response(report):
+    """Create an OpenAI-compatible mock response."""
+    response = MagicMock()
+    response.choices[0].message.content = report.model_dump_json()
+    return response
+
+
+@patch("devguard.agent.OpenAI")
+def test_agent_initialization(mock_openai, monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake_test_key")
+
     agent = DevGuardAgent()
-    assert agent.model_name == "gemini-3.6-flash"
+
     assert agent.api_key == "fake_test_key"
-    mock_genai_client.assert_called_once()
+    assert agent.client == mock_openai.return_value
+
+    mock_openai.assert_called_once_with(
+        base_url="https://openrouter.ai/api/v1",
+        api_key="fake_test_key"
+    )
 
 
-@patch("devguard.agent.genai.Client")
-def test_analyze_code_returns_structured_report(mock_genai_client, monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "fake_test_key")
+@patch("devguard.agent.OpenAI")
+def test_analyze_code_returns_structured_report(mock_openai, monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake_test_key")
 
     expected_report = SecurityReport(
         project_name="Test Project",
@@ -23,12 +39,11 @@ def test_analyze_code_returns_structured_report(mock_genai_client, monkeypatch):
         findings=[],
         recommendations=["Use secure coding practices."]
     )
-    mock_response = MagicMock()
-    mock_response.parsed = expected_report
 
-    # Configure mock client return value
-    mock_instance = mock_genai_client.return_value
-    mock_instance.models.generate_content.return_value = mock_response
+    mock_instance = mock_openai.return_value
+    mock_instance.chat.completions.create.return_value = (
+        make_mock_response(expected_report)
+    )
 
     agent = DevGuardAgent()
     result = agent.analyze_code("print('Hello, World!')")
@@ -37,78 +52,112 @@ def test_analyze_code_returns_structured_report(mock_genai_client, monkeypatch):
     assert result.project_name == "Test Project"
     assert result.findings == []
 
-    mock_instance.models.generate_content.assert_called_once()
+    mock_instance.chat.completions.create.assert_called_once()
 
-@patch("devguard.agent.genai.Client")
-def test_analyze_code_raises_error_for_missing_response(mock_genai_client, monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "fake_test_key")
 
-    # Mock the Gemini response object
+@patch("devguard.agent.OpenAI")
+def test_analyze_code_raises_error_for_missing_response(
+    mock_openai, monkeypatch
+):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake_test_key")
+
+    mock_instance = mock_openai.return_value
     mock_response = MagicMock()
-    mock_response.parsed = None
-    
-    # Configure mock client return value
-    mock_instance = mock_genai_client.return_value
-    mock_instance.models.generate_content.return_value = mock_response
+    mock_response.choices[0].message.content = None
+
+    mock_instance.chat.completions.create.return_value = mock_response
 
     agent = DevGuardAgent()
 
-    with pytest.raises(ValueError, match="valid structured report"):
+    # Current fallback implementation retries each model
+    # and raises an exception if every attempt fails.
+    with pytest.raises(Exception, match="All model attempts failed"):
         agent.analyze_code("print('Hello, World!')")
 
-def test_analyze_code_rejects_empty_input(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "fake_test_key")
+    assert mock_instance.chat.completions.create.call_count == 3
 
-    with patch("devguard.agent.genai.Client"):
-        agent = DevGuardAgent()
-        with pytest.raises(ValueError, match="cannot be empty"):
-            agent.analyze_code("   ")  # Input with only whitespace
 
-def test_analyze_code_rejects_non_string_input(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "fake_test_key")
+@patch("devguard.agent.OpenAI")
+def test_analyze_code_rejects_empty_input(mock_openai, monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake_test_key")
 
-    with patch("devguard.agent.genai.Client"):
-        agent = DevGuardAgent()
-        with pytest.raises(TypeError, match="must be a string"):
-            agent.analyze_code(None)  # Non-string input
-@patch("devguard.agent.genai.Client")
-def test_analyze_repository_mocked(mock_genai_client, monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "fake_test_key")
-    
-    # Mock the Gemini response object
-    mock_response = MagicMock()
-    mock_response.parsed = {
-        "project_name": "Test Project",
-        "findings": [{
-            "title": "SQL Injection",
-            "severity": "high",
-            "category": "Injection",
-            "file_path": "main.py",
-            "line_number": 5, # This is line 5 of the chunk
-            "description": "Bad SQL",
-            "evidence": "query = 'SELECT * FROM users'",
-            "recommendation": "Use parameterized queries",
-            "confidence": 0.9
-        }],
-        "summary": "Found issues.",
-        "recommendations": ["Fix SQL"]
-    }
-    
-    mock_instance = mock_genai_client.return_value
-    mock_instance.models.generate_content.return_value = mock_response
-    
     agent = DevGuardAgent()
-    
-    # Fake files passed by the retriever
-    fake_files = [{
-        "file_path": "main.py",
-        "source_code": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10"
-    }]
-    
+
+    with pytest.raises(ValueError):
+        agent.analyze_code("   ")
+
+    mock_openai.return_value.chat.completions.create.assert_not_called()
+
+
+@patch("devguard.agent.OpenAI")
+def test_analyze_code_rejects_non_string_input(mock_openai, monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake_test_key")
+
+    agent = DevGuardAgent()
+
+    with pytest.raises(TypeError):
+        agent.analyze_code(None)
+
+    mock_openai.return_value.chat.completions.create.assert_not_called()
+
+
+@patch("devguard.agent.OpenAI")
+def test_analyze_repository_mocked(mock_openai, monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake_test_key")
+
+    expected_report = SecurityReport(
+        project_name="Test Project",
+        findings=[
+            {
+                "title": "SQL Injection",
+                "severity": "high",
+                "category": "Injection",
+                "file_path": "main.py",
+                "line_number": 5,
+                "description": "Unsafe SQL query construction.",
+                "evidence": "query = 'SELECT * FROM users'",
+                "recommendation": "Use parameterized queries.",
+                "confidence": 0.9
+            }
+        ],
+        summary="Found issues.",
+        recommendations=["Fix SQL injection."]
+    )
+
+    mock_instance = mock_openai.return_value
+    mock_instance.chat.completions.create.return_value = (
+        make_mock_response(expected_report)
+    )
+
+    agent = DevGuardAgent()
+
+    fake_files = [
+        {
+            "file_path": "main.py",
+            "source_code": (
+                "line 1\n"
+                "line 2\n"
+                "line 3\n"
+                "line 4\n"
+                "line 5\n"
+                "line 6\n"
+                "line 7\n"
+                "line 8\n"
+                "line 9\n"
+                "line 10"
+            )
+        }
+    ]
+
     report = agent.analyze_repository(fake_files)
-    
+
     assert report.project_name == "Scanned Project"
     assert len(report.findings) == 1
-    assert report.findings[0].title == "SQL Injection"
-    # Since the chunk starts at line 1, line 5 stays line 5. 
-    # But if the chunk started at line 10, it would be 5 + 10 - 1 = 14.
+
+    finding = report.findings[0]
+
+    assert finding.title == "SQL Injection"
+    assert finding.file_path == "main.py"
+    assert finding.line_number == 5
+
+    mock_instance.chat.completions.create.assert_called_once()

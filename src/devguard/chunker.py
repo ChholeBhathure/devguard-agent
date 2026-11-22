@@ -4,7 +4,7 @@ from typing import Any
 def chunk_source_code(
     source_code: str, 
     file_path: str, 
-    max_tokens: int = 7000, 
+    max_tokens: int = 5000, 
     overlap_lines: int = 5
 ) -> list[dict[str, Any]]:
     """
@@ -77,7 +77,7 @@ def chunk_source_code(
             
             current_chunk_lines = overlap_data
             current_chars = sum(len(l) for l in current_chunk_lines)
-            start_line = current_line_num - overlap_count
+            start_line = current_line_num - overlap_count + 1
 
         current_chunk_lines.append(line)
         current_chars += line_len

@@ -74,7 +74,7 @@ def test_analyze_code_raises_error_for_missing_response(
     with pytest.raises(Exception, match="All model attempts failed"):
         agent.analyze_code("print('Hello, World!')")
 
-    assert mock_instance.chat.completions.create.call_count == 3
+    assert mock_instance.chat.completions.create.call_count == 1
 
 
 @patch("devguard.agent.OpenAI")

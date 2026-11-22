@@ -58,10 +58,7 @@ class DevGuardAgent:
             raise ValueError("code_snippet cannot be empty.")
 
         models_to_try = [
-            "cohere/north-mini-code:free",
-            "openai/gpt-oss-120b:free",
-            "google/gemma-4-26b-a4b-it:free"
-            "meta-llama/llama-3.3-70b-instruct:free",
+            "recursive/flint-v1.0:free",
         ]
         
         last_error = None
@@ -72,14 +69,30 @@ class DevGuardAgent:
                     model=model,
                     messages=[
                         {"role": "system", "content": self.system_instruction},
-                        {"role": "user", "content": f"Language: {language}\n\nCode:\n```{language.lower()}\n{code_snippet}\n```"}
+                        {"role": "user",
+                        "content": (
+                            f"Language: {language}\n"
+                            "Analyze the following code for security vulnerabilities.\n"
+                            "IMPORTANT: Report line numbers relative to this code snippet,"
+                            "starting from line 1. Do not use line numbers from any external file.\n\n"
+                            f"```{language.lower()}\n{code_snippet}\n```"
+                        )
+                }
                     ],
                     temperature=0.2,
                     response_format={"type": "json_object"})
                 
-                content = response.choices[0].message.content
-                if not content:
-                    raise ValueError("Model returned an empty response.")
+                if not response.choices:
+                    raise ValueError("OpenRouter returned no choices.")
+
+                message = response.choices[0].message
+                content = message.content
+
+                if not content or not content.strip():
+                    raise ValueError(
+                        f"Empty response from {model}. "
+                        f"Finish reason: {response.choices[0].finish_reason}"
+                    )
                 
                 # Some models wrap the JSON in markdown blocks (```json ... ```)
                 if content.startswith("```json"):
@@ -120,57 +133,74 @@ class DevGuardAgent:
 
     def analyze_repository(self, files: list[dict]) -> SecurityReport:
         from devguard.chunker import chunk_source_code
-        
+
         all_findings = []
         project_name = "Scanned Project"
-        
-        # 1. Loop through every file the retriever found
+
+        total_chunks = 0
+        successful_chunks = 0
+        skipped_files = 0
+
+        # Step 1: Process every discovered file
         for file_entry in files:
             source_code = file_entry.get("source_code", "")
             file_path = file_entry.get("file_path", "unknown.py")
-            
-            if not source_code:
+
+            if not source_code.strip():
+                skipped_files += 1
                 continue
-                
-            # 2. Chunk the file's source code
+
+            # Step 2: Split source code into chunks
             chunks = chunk_source_code(source_code, file_path)
-            
-            # 3. Analyze each chunk with Gemini
+            total_chunks += len(chunks)
+
+            # Step 3: Analyze every chunk
             for chunk in chunks:
-                chunk_code = chunk["source_code"]
                 start_line = chunk["start_line"]
                 end_line = chunk["end_line"]
-                
-                # Create a prompt specific to this chunk
-                prompt = f"File: {file_path}\nLines {start_line} to {end_line}\n\nCode:\n```python\n{chunk_code}\n```"
-                
-                # We reuse our existing Gemini call logic, but we need to handle the response
-                # (We will refine this in the next step to handle errors and rate limits)
-                try:
-                    #Create a specialized prompt for the chunk
-                    chunk_prompt=f"Audit this code from file'{file_path}'(lines{start_line}-{end_line}):\n\n{chunk_code}"
-                    # Note: We are currently calling analyze_code for every chunk. 
-                    # In a real app, we might want a dedicated method that doesn't repeat the project_name setup.
-                    chunk_report = self.analyze_code(chunk_code, language="python")
-                    
-                    # Fix the line numbers to match the original file
-                    for finding in chunk_report.findings:
-                        finding.file_path=file_path
-                        if finding.line_number:
-                            # Adjust relative line number to absolute file line
-                            finding.line_number = finding.line_number + start_line - 1
-                        all_findings.append(finding)
-                        
-                except Exception as e:
-                    print(f"Failed to analyze chunk in {file_path}: {e}")
-                    continue
+                chunk_code = chunk["source_code"]
 
-        # 4. Aggregate the findings into one final report
+
+                try:
+                    chunk_report = self.analyze_code(
+                        chunk_code,
+                        language="python"
+                    )
+
+                    successful_chunks += 1
+
+                    # Step 4: Restore original file locations
+                    for finding in chunk_report.findings:
+                        finding.file_path = file_path
+
+                        if finding.line_number is not None:
+                            finding.line_number = (
+                                finding.line_number + start_line - 1
+                            )
+
+                        all_findings.append(finding)
+
+                except Exception as error:
+                    raise RuntimeError(
+                        f"Analysis failed for {file_path}, "
+                        f"lines {start_line}-{end_line}: {error}"
+                    ) from error
+
+        # Step 5: Build final report
         final_report = SecurityReport(
             project_name=project_name,
             findings=all_findings,
-            summary=f"Analyzed {len(files)} files and found {len(all_findings)} potential issues.",
-            recommendations=["Review the findings and apply the suggested remediations."]
+            summary=(
+                f"Successfully analyzed {successful_chunks} of "
+                f"{total_chunks} chunks across {len(files)} discovered files. "
+                f"Found {len(all_findings)} potential issues. "
+                f"Skipped files: {skipped_files}."
+            ),
+            recommendations=[
+                "Review each finding and verify the evidence.",
+                "Prioritize critical and high-severity findings.",
+                "Apply the recommended security fixes."
+            ]
         )
-        
+
         return final_report

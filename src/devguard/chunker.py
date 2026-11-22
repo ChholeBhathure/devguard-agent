@@ -73,11 +73,14 @@ def chunk_source_code(
 
             # Apply overlap: keep the last N lines for the next chunk
             overlap_count = min(overlap_lines, len(current_chunk_lines))
-            overlap_data = current_chunk_lines[-overlap_count:]
-            
+            overlap_data = (
+                current_chunk_lines[-overlap_count:]
+                if overlap_count > 0
+                else []
+            )
             current_chunk_lines = overlap_data
             current_chars = sum(len(l) for l in current_chunk_lines)
-            start_line = current_line_num - overlap_count + 1
+            start_line = current_line_num - overlap_count
 
         current_chunk_lines.append(line)
         current_chars += line_len

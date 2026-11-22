@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from devguard.schemas.finding import SecurityFinding, SecurityReport
+from devguard.schemas.finding import SecurityFinding, SecurityReport,  FailedChunk
 
 def test_security_finding_validation():
     finding = SecurityFinding(
@@ -50,3 +50,34 @@ def test_security_report_validation():
     )
     assert report.project_name == "Demo Project"
     assert len(report.findings) == 0
+
+def test_security_report_defaults_to_no_failed_chunks():
+    report = SecurityReport(
+        project_name="Demo",
+        findings=[],
+        summary="Analysis completed",
+        recommendations=[]
+    )
+
+    assert report.failed_chunks == []
+
+
+def test_failed_chunk_validation():
+    report = SecurityReport(
+        project_name="Demo",
+        findings=[],
+        summary="Partial analysis",
+        recommendations=[],
+        failed_chunks=[
+            FailedChunk(
+                file_path="auth.py",
+                start_line=50,
+                end_line=100,
+                error="API request failed"
+            )
+        ]
+    )
+
+    assert len(report.failed_chunks) == 1
+    assert report.failed_chunks[0].file_path == "auth.py"
+    assert report.failed_chunks[0].start_line == 50    

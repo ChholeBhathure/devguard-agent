@@ -12,8 +12,16 @@ class SecurityFinding(BaseModel):
     recommendation: str
     confidence: float = Field(ge=0.0, le=1.0)
 
+class FailedChunk(BaseModel):
+    file_path: str
+    start_line: int
+    end_line: int
+    error: str
+
+
 class SecurityReport(BaseModel):
     project_name: str
     findings: list[SecurityFinding]
     summary: str
     recommendations: list[str]
+    failed_chunks: list[FailedChunk] = Field(default_factory=list)

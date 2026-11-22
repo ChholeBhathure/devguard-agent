@@ -3,7 +3,7 @@ import json
 import time
 from openai import OpenAI
 from dotenv import load_dotenv
-from devguard.schemas.finding import SecurityReport
+from devguard.schemas.finding import SecurityReport, FailedChunk
 
 load_dotenv()
 
@@ -135,6 +135,8 @@ class DevGuardAgent:
         from devguard.chunker import chunk_source_code
 
         all_findings = []
+        failed_chunks = []
+
         project_name = "Scanned Project"
 
         total_chunks = 0
@@ -154,12 +156,11 @@ class DevGuardAgent:
             chunks = chunk_source_code(source_code, file_path)
             total_chunks += len(chunks)
 
-            # Step 3: Analyze every chunk
+            # Step 3: Analyze every chunk independently
             for chunk in chunks:
                 start_line = chunk["start_line"]
                 end_line = chunk["end_line"]
                 chunk_code = chunk["source_code"]
-
 
                 try:
                     chunk_report = self.analyze_code(
@@ -174,32 +175,75 @@ class DevGuardAgent:
                         finding.file_path = file_path
 
                         if finding.line_number is not None:
-                            finding.line_number = (
-                                finding.line_number + start_line - 1
-                            )
+                            finding.line_number += start_line - 1
 
-                        all_findings.append(finding)
+                        # Preserve findings without a reliable line number.
+                        if finding.line_number is None:
+                            all_findings.append(finding)
+                            continue
+
+                        # Normalize values for duplicate comparison.
+                        normalized_title = " ".join(finding.title.casefold().split())
+                        normalized_category = " ".join(finding.category.casefold().split())
+
+                        duplicate = any(
+                            existing.file_path == finding.file_path
+                            and existing.line_number == finding.line_number
+                            and " ".join(existing.title.casefold().split()) == normalized_title
+                            and " ".join(existing.category.casefold().split()) == normalized_category
+                            for existing in all_findings
+                        )
+
+                        if not duplicate:
+                            all_findings.append(finding)
 
                 except Exception as error:
-                    raise RuntimeError(
-                        f"Analysis failed for {file_path}, "
-                        f"lines {start_line}-{end_line}: {error}"
-                    ) from error
+                    # Record this failed chunk and continue scanning
+                    failed_chunks.append(
+                        FailedChunk(
+                            file_path=file_path,
+                            start_line=start_line,
+                            end_line=end_line,
+                            error=str(error)
+                        )
+                    )
 
-        # Step 5: Build final report
+                    continue
+
+        # Step 5: Determine the overall scan status
+        if total_chunks == 0:
+            scan_status = "No analyzable code chunks were found."
+        elif successful_chunks == 0:
+            scan_status = (
+                "Analysis failed for every chunk. "
+                "No security conclusions can be drawn."
+            )
+        elif failed_chunks:
+            scan_status = (
+                "Analysis partially completed. "
+                "Some chunks could not be analyzed."
+            )
+        else:
+            scan_status = "Repository analysis completed successfully."
+
+        # Step 6: Build the final report
         final_report = SecurityReport(
             project_name=project_name,
             findings=all_findings,
+            failed_chunks=failed_chunks,
             summary=(
+                f"{scan_status} "
                 f"Successfully analyzed {successful_chunks} of "
                 f"{total_chunks} chunks across {len(files)} discovered files. "
                 f"Found {len(all_findings)} potential issues. "
+                f"Failed chunks: {len(failed_chunks)}. "
                 f"Skipped files: {skipped_files}."
             ),
             recommendations=[
                 "Review each finding and verify the evidence.",
                 "Prioritize critical and high-severity findings.",
-                "Apply the recommended security fixes."
+                "Apply the recommended security fixes.",
+                "Review failed chunks and retry their analysis."
             ]
         )
 

@@ -136,6 +136,7 @@ class DevGuardAgent:
 
         all_findings = []
         failed_chunks = []
+        warnings = []
 
         project_name = "Scanned Project"
 
@@ -170,12 +171,22 @@ class DevGuardAgent:
 
                     successful_chunks += 1
 
-                    # Step 4: Restore original file locations
+                    # Step 4: Validate and restore original file locations
+                    chunk_line_count = len(chunk_code.splitlines())
+
                     for finding in chunk_report.findings:
                         finding.file_path = file_path
 
                         if finding.line_number is not None:
-                            finding.line_number += start_line - 1
+                            if not 1 <= finding.line_number <= chunk_line_count:
+                                warnings.append(
+                                    f"Invalid line number {finding.line_number} reported "
+                                    f"for {file_path}, chunk lines {start_line}-{end_line}. "
+                                    "Finding preserved, but its location was marked unavailable."
+                                )
+                                finding.line_number = None
+                            else:
+                                finding.line_number += start_line - 1
 
                         # Preserve findings without a reliable line number.
                         if finding.line_number is None:
@@ -231,6 +242,7 @@ class DevGuardAgent:
             project_name=project_name,
             findings=all_findings,
             failed_chunks=failed_chunks,
+            warnings=warnings,
             summary=(
                 f"{scan_status} "
                 f"Successfully analyzed {successful_chunks} of "

@@ -25,3 +25,4 @@ class SecurityReport(BaseModel):
     summary: str
     recommendations: list[str]
     failed_chunks: list[FailedChunk] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)

@@ -80,4 +80,27 @@ def test_failed_chunk_validation():
 
     assert len(report.failed_chunks) == 1
     assert report.failed_chunks[0].file_path == "auth.py"
-    assert report.failed_chunks[0].start_line == 50    
+    assert report.failed_chunks[0].start_line == 50
+
+def test_security_report_defaults_to_no_warnings():
+    report = SecurityReport(
+        project_name="Demo",
+        findings=[],
+        summary="Analysis completed",
+        recommendations=[]
+    )
+
+    assert report.warnings == []
+
+
+def test_security_report_accepts_warnings():
+    report = SecurityReport(
+        project_name="Demo",
+        findings=[],
+        summary="Analysis completed with warnings",
+        recommendations=[],
+        warnings=["Invalid line number in auth.py"]
+    )
+
+    assert len(report.warnings) == 1
+    assert report.warnings[0] == "Invalid line number in auth.py"    

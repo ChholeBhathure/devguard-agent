@@ -357,13 +357,13 @@ def test_analyze_repository_removes_duplicate_findings(
             "file_path": "auth.py",
             "start_line": 1,
             "end_line": 10,
-            "source_code": "chunk 1"
+            "source_code": "\n".join(["line"]*10)
         },
         {
             "file_path": "auth.py",
             "start_line": 6,
             "end_line": 15,
-            "source_code": "chunk 2"
+            "source_code": "\n".join(["line"]*10)
         }
     ]
 
@@ -497,3 +497,178 @@ def test_analyze_repository_preserves_distinct_findings(
     titles = {finding.title for finding in report.findings}
 
     assert titles == {"SQL Injection", "Hardcoded Secret"}
+
+@patch("devguard.agent.OpenAI")
+def test_analyze_repository_converts_chunk_line_to_file_line(
+    mock_openai, monkeypatch
+):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake_test_key")
+
+    chunks = [
+        {
+            "file_path": "auth.py",
+            "start_line": 1,
+            "end_line": 100,
+            "source_code": "first chunk"
+        },
+        {
+            "file_path": "auth.py",
+            "start_line": 96,
+            "end_line": 195,
+            "source_code": "\n".join(["line"]*100)
+        }
+    ]
+
+    second_chunk_report = SecurityReport(
+        project_name="Test",
+        findings=[
+            {
+                "title": "SQL Injection",
+                "severity": "high",
+                "category": "Injection",
+                "file_path": None,
+                "line_number": 25,
+                "description": "Unsafe SQL query.",
+                "evidence": "query = user_input",
+                "recommendation": "Use parameterized queries.",
+                "confidence": 0.9
+            }
+        ],
+        summary="Finding detected.",
+        recommendations=[]
+    )
+
+    with patch(
+        "devguard.chunker.chunk_source_code",
+        return_value=chunks
+    ):
+        agent = DevGuardAgent()
+
+        agent.analyze_code = MagicMock(
+            side_effect=[
+                SecurityReport(
+                    project_name="Test",
+                    findings=[],
+                    summary="No findings.",
+                    recommendations=[]
+                ),
+                second_chunk_report
+            ]
+        )
+
+        report = agent.analyze_repository([
+            {
+                "file_path": "auth.py",
+                "source_code": "dummy source code"
+            }
+        ])
+
+    assert len(report.findings) == 1
+    assert report.findings[0].line_number == 120
+    assert report.findings[0].file_path == "auth.py"
+
+@pytest.mark.parametrize("invalid_line", [0, -5, 150])
+@patch("devguard.agent.OpenAI")
+def test_analyze_repository_preserves_finding_with_invalid_line_number(
+    mock_openai, monkeypatch, invalid_line
+):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake_test_key")
+
+    chunks = [
+        {
+            "file_path": "auth.py",
+            "start_line": 10,
+            "end_line": 19,
+            "source_code": "\n".join(["line"] * 10)
+        }
+    ]
+
+    chunk_report = SecurityReport(
+        project_name="Test",
+        findings=[
+            {
+                "title": "SQL Injection",
+                "severity": "high",
+                "category": "Injection",
+                "file_path": None,
+                "line_number": invalid_line,
+                "description": "Unsafe SQL query.",
+                "evidence": "query = user_input",
+                "recommendation": "Use parameterized queries.",
+                "confidence": 0.9
+            }
+        ],
+        summary="Finding detected.",
+        recommendations=[]
+    )
+
+    with patch(
+        "devguard.chunker.chunk_source_code",
+        return_value=chunks
+    ):
+        agent = DevGuardAgent()
+        agent.analyze_code = MagicMock(return_value=chunk_report)
+
+        report = agent.analyze_repository([
+            {
+                "file_path": "auth.py",
+                "source_code": "dummy source code"
+            }
+        ])
+
+    assert len(report.findings) == 1
+    assert report.findings[0].file_path == "auth.py"
+    assert report.findings[0].line_number is None
+    assert len(report.warnings) == 1
+    assert "Invalid line number" in report.warnings[0]
+
+@patch("devguard.agent.OpenAI")
+def test_analyze_repository_accepts_valid_chunk_line_number(
+    mock_openai, monkeypatch
+):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake_test_key")
+
+    chunks = [
+        {
+            "file_path": "auth.py",
+            "start_line": 10,
+            "end_line": 19,
+            "source_code": "\n".join(["line"] * 10)
+        }
+    ]
+
+    chunk_report = SecurityReport(
+        project_name="Test",
+        findings=[
+            {
+                "title": "SQL Injection",
+                "severity": "high",
+                "category": "Injection",
+                "file_path": None,
+                "line_number": 5,
+                "description": "Unsafe SQL query.",
+                "evidence": "query = user_input",
+                "recommendation": "Use parameterized queries.",
+                "confidence": 0.9
+            }
+        ],
+        summary="Finding detected.",
+        recommendations=[]
+    )
+
+    with patch(
+        "devguard.chunker.chunk_source_code",
+        return_value=chunks
+    ):
+        agent = DevGuardAgent()
+        agent.analyze_code = MagicMock(return_value=chunk_report)
+
+        report = agent.analyze_repository([
+            {
+                "file_path": "auth.py",
+                "source_code": "dummy source code"
+            }
+        ])
+
+    assert report.findings[0].line_number == 14
+    assert report.warnings == []

@@ -5,6 +5,7 @@ import time
 import streamlit as st
 from devguard.agent import DevGuardAgent
 from devguard.retriever import LocalRetriever
+from devguard.report_generator import generate_pdf_report
 
 st.set_page_config(page_title="DevGuard AI", page_icon="🛡️", layout="wide")
 
@@ -316,6 +317,31 @@ with tab2:
         render_findings(
             st.session_state.repository_report,
             "repository"
+        )
+        pdf_bytes = generate_pdf_report(
+        st.session_state.repository_report
+        )
+
+        st.download_button(
+            label="Download PDF Report",
+            data=pdf_bytes,
+            file_name="devguard_security_report.pdf",
+            mime="application/pdf",
+            key="download_repository_pdf"
+        )
+        # Download security report as JSON
+        json_report = (
+            st.session_state.repository_report.model_dump_json(
+                indent=2
+            )
+        )
+
+        st.download_button(
+            label="Download JSON Report",
+            data=json_report,
+            file_name="devguard_security_report.json",
+            mime="application/json",
+            key="download_repository_json"
         )
 
         if st.session_state.repository_scan_errors:

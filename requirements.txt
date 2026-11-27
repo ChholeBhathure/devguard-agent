@@ -4,3 +4,4 @@ google-genai
 rich
 markdown
 pytest
+reportlab>=4.0

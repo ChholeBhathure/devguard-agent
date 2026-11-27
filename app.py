@@ -35,25 +35,29 @@ sys.path.append(str(src_path.resolve()))
 st.title("🛡️ DevGuard — AI Code Auditor")
 st.write("Analyze individual code snippets or scan entire local Python repositories for vulnerabilities.")
 
-# Sidebar for API Key
+# API key configuration
 with st.sidebar:
     st.header("Configuration")
 
-    openrouter_key = st.text_input(
-        "Enter OpenRouter API Key:",
-        type="password"
-    )
+    # First check Streamlit Cloud Secrets
+    openrouter_key = st.secrets.get("OPENROUTER_API_KEY", "")
 
+    # If no Cloud Secret exists, check local environment
     if not openrouter_key:
-        openrouter_key = st.secrets.get(
-            "OPENROUTER_API_KEY",
-            os.getenv("OPENROUTER_API_KEY", "")
+        openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
+
+    # Show manual input only when no key is configured
+    if not openrouter_key:
+        openrouter_key = st.text_input(
+            "Enter OpenRouter API Key:",
+            type="password"
         )
 
     if not openrouter_key:
-        st.warning(
-            "⚠️ Please provide a valid OpenRouter API Key to proceed."
-        )
+        st.warning("Please configure your OpenRouter API Key.")
+    else:
+        st.success("API key configured.")
+        
 def get_finding_id(finding):
     """Generate a stable identifier for a security finding."""
 

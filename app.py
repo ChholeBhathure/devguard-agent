@@ -38,12 +38,22 @@ st.write("Analyze individual code snippets or scan entire local Python repositor
 # Sidebar for API Key
 with st.sidebar:
     st.header("Configuration")
-    openrouter_key = st.text_input("Enter OpenRouter API Key:", type="password")
+
+    openrouter_key = st.text_input(
+        "Enter OpenRouter API Key:",
+        type="password"
+    )
+
     if not openrouter_key:
-        openrouter_key = os.getenv("OPENROUTER_API_KEY")
-    
+        openrouter_key = st.secrets.get(
+            "OPENROUTER_API_KEY",
+            os.getenv("OPENROUTER_API_KEY", "")
+        )
+
     if not openrouter_key:
-        st.warning("⚠️ Please provide a valid OpenRouter API Key to proceed.")
+        st.warning(
+            "⚠️ Please provide a valid OpenRouter API Key to proceed."
+        )
 def get_finding_id(finding):
     """Generate a stable identifier for a security finding."""
 

@@ -12,6 +12,7 @@ dependencies = [
     "rich",
     "markdown",
     "reportlab>=4.0",
+    "openai",
 ]
 
 [project.scripts]

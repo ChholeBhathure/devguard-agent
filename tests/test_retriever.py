@@ -82,3 +82,33 @@ def test_invalid_python_file_is_recorded(tmp_path):
     assert files[0]["file_name"] == "valid.py"
     assert len(retriever.scan_errors) == 1
     assert "broken.py" in retriever.scan_errors[0]["file"]
+def test_symlink_outside_project_is_skipped(tmp_path):
+    """Files linked from outside the project must not be scanned."""
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    external_file = tmp_path / "secret.py"
+    external_file.write_text(
+        "SECRET = 'outside project'",
+        encoding="utf-8"
+    )
+
+    symlink_file = project_dir / "linked_secret.py"
+
+    try:
+        symlink_file.symlink_to(external_file)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlink creation is not supported on this system")
+
+    retriever = LocalRetriever(
+        root_dir=project_dir,
+        config={"ignore_dirs": [], "max_file_size_kb": 500}
+    )
+
+    files = retriever.scan_directory()
+
+    assert files == []
+    assert len(retriever.scan_errors) == 1
+    assert "outside the selected project directory" in (
+        retriever.scan_errors[0]["error"]
+    )

@@ -1,7 +1,2 @@
 -e .
-streamlit
-google-genai
-rich
-markdown
-pytest
-reportlab>=4.0
+pytest>=8.0.0

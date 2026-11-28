@@ -112,3 +112,31 @@ def test_symlink_outside_project_is_skipped(tmp_path):
     assert "outside the selected project directory" in (
         retriever.scan_errors[0]["error"]
     )
+@pytest.mark.parametrize(
+    "invalid_size",
+    [0, -100, 1.5, "500", True, None]
+)
+def test_invalid_max_file_size_config(tmp_path, invalid_size):
+    """Invalid max_file_size_kb values should be rejected."""
+    config = {
+        "ignore_dirs": [],
+        "max_file_size_kb": invalid_size,
+    }
+
+    with pytest.raises(
+        ValueError,
+        match="max_file_size_kb must be a positive integer"
+    ):
+        LocalRetriever(root_dir=tmp_path, config=config)
+
+
+def test_valid_max_file_size_config(tmp_path):
+    """A positive integer file-size limit should be accepted."""
+    config = {
+        "ignore_dirs": [],
+        "max_file_size_kb": 100,
+    }
+
+    retriever = LocalRetriever(root_dir=tmp_path, config=config)
+
+    assert retriever.max_file_size_bytes == 100 * 1024

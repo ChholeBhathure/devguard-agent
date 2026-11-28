@@ -18,8 +18,16 @@ class LocalRetriever:
             raise ValueError("ignore_dirs must be a list")
         
         self.ignore_dirs = set(ignore_dirs)
-        max_file_size_kb=self.config.get("max_file_size_kb",500)
-        self.max_file_size_bytes = int(max_file_size_kb) * 1024
+        max_file_size_kb = self.config.get("max_file_size_kb", 500)
+
+        if (
+            isinstance(max_file_size_kb, bool)
+            or not isinstance(max_file_size_kb, int)
+            or max_file_size_kb <= 0
+        ):
+            raise ValueError("max_file_size_kb must be a positive integer.")
+
+        self.max_file_size_bytes = max_file_size_kb * 1024
 
         #Stores errors encountered during scanning.
         self.scan_errors: list[dict[str, str]] = []

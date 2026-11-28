@@ -62,3 +62,19 @@ def test_parse_simple_python_file():
     assert result["imports"][0]["lineno"] == 1
     assert result["imports"][1]["name"] == "from pathlib import Path"
     assert result["imports"][1]["lineno"] == 2
+
+def test_parse_python_source_without_reading_file():
+    """Parse source code directly without requiring a file."""
+    from devguard.parser import parse_python_source
+
+    source_code = "def hello():\n    return True\n"
+
+    result = parse_python_source(
+        source_code,
+        file_name="example.py",
+    )
+
+    assert result["file_name"] == "example.py"
+    assert len(result["functions"]) == 1
+    assert result["functions"][0]["name"] == "hello"
+    assert result["functions"][0]["scope"] == "function"

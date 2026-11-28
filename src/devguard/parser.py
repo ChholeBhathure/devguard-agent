@@ -80,6 +80,25 @@ class CodeStructureVisitor(ast.NodeVisitor):
         self.class_stack.pop()
 
 
+def parse_python_source(
+    source_code: str,
+    file_name: str = "<unknown>",
+) -> dict[str, Any]:
+    """Extract AST metadata directly from Python source code."""
+
+    tree = ast.parse(source_code, filename=file_name)
+
+    visitor = CodeStructureVisitor()
+    visitor.visit(tree)
+
+    return {
+        "file_name": Path(file_name).name,
+        "imports": visitor.imports,
+        "classes": visitor.classes,
+        "functions": visitor.functions,
+    }
+
+
 def parse_python_file(file_path: str | Path) -> dict[str, Any]:
     """Read a Python file and extract its structural metadata."""
 
@@ -89,21 +108,5 @@ def parse_python_file(file_path: str | Path) -> dict[str, Any]:
         raise ValueError(f"Invalid Python file path: {file_path}")
 
     source_code = path.read_text(encoding="utf-8")
-    tree = ast.parse(source_code, filename=str(path))
 
-    visitor = CodeStructureVisitor()
-    visitor.visit(tree)
-
-    return {
-        "file_name": path.name,
-        "imports": visitor.imports,
-        "classes": visitor.classes,
-        "functions": visitor.functions,
-    }
-
-
-
-
-
-
-
+    return parse_python_source(source_code, file_name=path.name)

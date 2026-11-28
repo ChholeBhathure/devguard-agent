@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import Any
-from devguard.parser import parse_python_file
+from devguard.parser import parse_python_source
 from devguard.config import load_config
 
 class LocalRetriever:
@@ -55,23 +55,31 @@ class LocalRetriever:
                             "error": "File is outside the selected project directory.",
                         })
                         continue
+                   
                     file_size = resolved_path.stat().st_size
+
                     if file_size > self.max_file_size_bytes:
                         self.scan_errors.append({
                             "file": str(path),
                             "error": "File exceeds maximum allowed size.",
                         })
                         continue
-                    #Extracts structural metadata from the Python file using AST.
-                    parsed_data=parse_python_file(resolved_path)
-                    if parsed_data:
-                        source_code = resolved_path.read_text(encoding="utf-8")
 
+                    # Read source code only once
+                    source_code = resolved_path.read_text(encoding="utf-8")
+
+                    # Extract structural metadata using AST
+                    parsed_data = parse_python_source(
+                        source_code,
+                        file_name=resolved_path.name,
+                    )
+
+                    if parsed_data:
                         parsed_data["file_path"] = str(
                             path.relative_to(self.root_dir)
                         )
                         parsed_data["source_code"] = source_code
-                        
+
                         indexed_files.append(parsed_data)
                     
                 except (SyntaxError,UnicodeError,OSError,ValueError) as error:

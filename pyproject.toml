@@ -5,18 +5,16 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "devguard"
 version = "0.1.0"
-description = "Local-first autonomous Python code review agent."
+description = "AI-assisted Python code security analysis application."
+readme = "README.md"
+requires-python = ">=3.10"
 dependencies = [
-    "google-genai",
-    "python-dotenv",
-    "rich",
-    "markdown",
-    "reportlab>=4.0",
     "openai",
+    "pydantic>=2.0",
+    "python-dotenv",
+    "reportlab>=4.0",
+    "streamlit",
 ]
-
-[project.scripts]
-devguard = "devguard.cli:main"
 
 [project.optional-dependencies]
 dev = [

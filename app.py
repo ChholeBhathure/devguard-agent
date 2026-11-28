@@ -43,10 +43,6 @@ with st.sidebar:
 
     try:
         openrouter_key = st.secrets.get("OPENROUTER_API_KEY", "")
-        st.sidebar.write(
-            "Cloud secret loaded:",
-            bool(openrouter_key)
-        )
     except Exception:
         pass
 

@@ -39,25 +39,31 @@ st.write("Analyze individual code snippets or scan entire local Python repositor
 with st.sidebar:
     st.header("Configuration")
 
-    # First check Streamlit Cloud Secrets
-    openrouter_key = st.secrets.get("OPENROUTER_API_KEY", "")
+    openrouter_key = ""
 
-    # If no Cloud Secret exists, check local environment
+    try:
+        openrouter_key = st.secrets.get("OPENROUTER_API_KEY", "")
+        st.sidebar.write(
+            "Cloud secret loaded:",
+            bool(openrouter_key)
+        )
+    except Exception:
+        pass
+
     if not openrouter_key:
         openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
 
-    # Show manual input only when no key is configured
-    if not openrouter_key:
+    if openrouter_key:
+        st.success("OpenRouter API key configured.")
+    else:
+        st.warning("OpenRouter API key not configured.")
+
         openrouter_key = st.text_input(
             "Enter OpenRouter API Key:",
-            type="password"
+            type="password",
+            key="openrouter_api_key_input"
         )
 
-    if not openrouter_key:
-        st.warning("Please configure your OpenRouter API Key.")
-    else:
-        st.success("API key configured.")
-        
 def get_finding_id(finding):
     """Generate a stable identifier for a security finding."""
 
